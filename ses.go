@@ -20,6 +20,45 @@ import (
 	"time"
 )
 
+type SendOptions struct {
+	From string
+	Tos  []string
+	Ccs  []string
+	Bccs []string
+
+	Subject string
+	Body    string
+}
+
+func (c *Config) SendEmailByOptions(opt SendOptions) (string, error) {
+
+	data := make(url.Values)
+	data.Add("Action", "SendEmail")
+	data.Add("Source", opt.From)
+
+	for i, to := range opt.Tos {
+		seq := 1 + i
+		data.Add(fmt.Sprintf("Destination.ToAddresses.member.%d", seq), to)
+	}
+
+	for i, cc := range opt.Ccs {
+		seq := 1 + i
+		data.Add(fmt.Sprintf("Destination.CcAddresses.member.%d", seq), cc)
+	}
+
+	for i, bcc := range opt.Bccs {
+		seq := 1 + i
+		data.Add(fmt.Sprintf("Destination.BccAddresses.member.%d", seq), bcc)
+	}
+
+	data.Add("Message.Subject.Data", opt.Subject)
+	data.Add("Message.Body.Text.Data", opt.Body)
+	//	data.Add("Message.Body.HTML.Data", opt.Body)
+	data.Add("AWSAccessKeyId", c.AccessKeyID)
+
+	return sesPost(data, c.Endpoint, c.AccessKeyID, c.SecretAccessKey)
+}
+
 // Config specifies configuration options and credentials for accessing Amazon SES.
 type Config struct {
 	// Endpoint is the AWS endpoint to use for requests.
@@ -38,35 +77,6 @@ var EnvConfig = Config{
 	Endpoint:        os.Getenv("AWS_SES_ENDPOINT"),
 	AccessKeyID:     os.Getenv("AWS_ACCESS_KEY_ID"),
 	SecretAccessKey: os.Getenv("AWS_SECRET_KEY"),
-}
-
-// SendEmail sends a plain text email. Note that from must be a verified
-// address in the AWS control panel.
-func (c *Config) SendEmail(from, to, subject, body string) (string, error) {
-	data := make(url.Values)
-	data.Add("Action", "SendEmail")
-	data.Add("Source", from)
-	data.Add("Destination.ToAddresses.member.1", to)
-	data.Add("Message.Subject.Data", subject)
-	data.Add("Message.Body.Text.Data", body)
-	data.Add("AWSAccessKeyId", c.AccessKeyID)
-
-	return sesPost(data, c.Endpoint, c.AccessKeyID, c.SecretAccessKey)
-}
-
-// SendEmailHTML sends a HTML email. Note that from must be a verified address
-// in the AWS control panel.
-func (c *Config) SendEmailHTML(from, to, subject, bodyText, bodyHTML string) (string, error) {
-	data := make(url.Values)
-	data.Add("Action", "SendEmail")
-	data.Add("Source", from)
-	data.Add("Destination.ToAddresses.member.1", to)
-	data.Add("Message.Subject.Data", subject)
-	data.Add("Message.Body.Text.Data", bodyText)
-	data.Add("Message.Body.Html.Data", bodyHTML)
-	data.Add("AWSAccessKeyId", c.AccessKeyID)
-
-	return sesPost(data, c.Endpoint, c.AccessKeyID, c.SecretAccessKey)
 }
 
 // SendRawEmail sends a raw email. Note that from must be a verified address
