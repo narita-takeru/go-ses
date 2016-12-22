@@ -43,10 +43,20 @@ var EnvConfig = Config{
 // SendEmail sends a plain text email. Note that from must be a verified
 // address in the AWS control panel.
 func (c *Config) SendEmail(from, to, subject, body string) (string, error) {
+	return c.SendEmailMultipleDestination(from, []string{to}, subject, body)
+}
+
+// SendEmailMultipleDestination sends a plain text email for multiple destination. Note that from must be a verified
+// address in the AWS control panel.
+func (c *Config) SendEmailMultipleDestination(from string, tos []string, subject, body string) (string, error) {
 	data := make(url.Values)
 	data.Add("Action", "SendEmail")
 	data.Add("Source", from)
-	data.Add("Destination.ToAddresses.member.1", to)
+	for i, to := range tos {
+		seq := 1 + i
+		data.Add(fmt.Sprintf("Destination.ToAddresses.member.%d", seq), to)
+	}
+
 	data.Add("Message.Subject.Data", subject)
 	data.Add("Message.Body.Text.Data", body)
 	data.Add("AWSAccessKeyId", c.AccessKeyID)
